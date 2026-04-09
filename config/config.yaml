@@ -1,0 +1,26 @@
+# Distributed Task Queue Configuration
+
+app:
+  name: "Distributed Task Queue"
+  version: "2.0.0"
+  debug: false
+
+features:
+  - 10K workers
+  - Priority queues
+  - Monitoring
+
+tech_stack:
+  - Celery
+  - Redis
+  - Flower
+  - RabbitMQ
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+
+logging:
+  level: INFO
+  format: "%(asctime)s | %(levelname)s | %(message)s"
