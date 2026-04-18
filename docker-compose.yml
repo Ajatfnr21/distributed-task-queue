@@ -1,12 +1,54 @@
 version: '3.8'
 
 services:
-  app:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  api:
     build: .
     ports:
       - "8000:8000"
-    volumes:
-      - ./config:/app/config:ro
     environment:
-      - LOG_LEVEL=INFO
-    restart: unless-stopped
+      - REDIS_URL=redis://redis:6379/0
+      - RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      - redis
+    command: python worker.py serve --host 0.0.0.0 --port 8000
+
+  worker:
+    build: .
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      - redis
+    deploy:
+      replicas: 2
+    command: python worker.py worker --queues=celery,high_priority,low_priority --concurrency=4
+
+  beat:
+    build: .
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      - redis
+    command: python worker.py beat
+
+  flower:
+    build: .
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    command: celery -A worker flower --port=5555 --host=0.0.0.0
+
+volumes:
+  redis_data:
